@@ -5,8 +5,13 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-URL = "https://httpbin.org/encoding/utf8"
-FILE = Path("foo", "bar.txt")
+#URL = "https://httpbin.org/encoding/utf8"
+#FILE = Path("foo", "bar.txt")
+#METADATA = {"foo": ["gnusto cleesh"]}
+
+URL = "https://archive.org/download/GameBoyProgManVer1.1/GameBoyProgManVer1.1.pdf"
+FILE = "programming/gameboy.pdf"
+METADATA = {"title":["GameBoy Programming Manual"]}
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)-8s] %(name)s: %(message)s",
@@ -33,7 +38,7 @@ log.debug("Opening pipe to: git-annex metadata --batch --json --json-error-messa
 
 
 with subprocess.Popen(["git-annex", "metadata", "--batch", "--json", "--json-error-messages"], cwd=repo, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as p:
-    line_in = (json.dumps({"file": str(FILE), "fields": {"foo": ["gnusto cleesh"]}}) + "\n").encode("utf-8")
+    line_in = (json.dumps({"file": str(FILE), "fields": METADATA}) + "\n").encode("utf-8")
     log.debug("Input: %r", line_in)
     p.stdin.write(line_in)
     p.stdin.flush()
