@@ -1,0 +1,25 @@
+name: Run
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '^3.8'
+
+      - name: Install git-annex
+        run: datalad-installer -l DEBUG --sudo ok git-annex -m datalad/git-annex:release
+
+      - name: Run script
+        run: python3 mvce.py
+
+# vim:set et sts=2:
