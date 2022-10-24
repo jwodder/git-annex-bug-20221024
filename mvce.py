@@ -29,9 +29,13 @@ log.debug("Running: git-annex addurl --file %s %s", URL, FILE)
 subprocess.run(["git-annex", "addurl", "--file", str(FILE), URL], cwd=repo, check=True)
 
 log.info("Setting file metadata via batch mode ...")
-log.debug("Running: git-annex metadata --batch --json --json-error-messages")
+log.debug("Opening pipe to: git-annex metadata --batch --json --json-error-messages")
 
-line_in = (json.dumps({"file": str(FILE), "fields": {"foo": ["bar"]}}) + "\r\n").encode("utf-8")
-log.debug("Input: %r", line_in)
-r = subprocess.run(["git-annex", "metadata", "--batch", "--json", "--json-error-messages"], cwd=repo, input=line_in, stdout=subprocess.PIPE, check=True)
-log.debug("Output: %r", r.stdout)
+
+with subprocess.Popen(["git-annex", "metadata", "--batch", "--json", "--json-error-messages"], cwd=repo, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as p:
+    line_in = (json.dumps({"file": str(FILE), "fields": {"foo": ["bar"]}}) + "\r\n").encode("utf-8")
+    log.debug("Input: %r", line_in)
+    p.stdin.write(line_in)
+    p.stdin.flush()
+    line_out = p.stdout.readline()
+    log.debug("Output: %r", line_out)
