@@ -52,8 +52,13 @@ async def amain():
         log.debug("Input to addurl: %r", line_in)
         addurl.stdin.write(line_in)
         await addurl.stdin.drain()
-        line_out = await addurl.stdout.readline()
-        log.debug("Output from addurl: %r", line_out)
+        #line_out = await addurl.stdout.readline()
+        #log.debug("Output from addurl: %r", line_out)
+        while True:
+            out = await addurl.stdout.read(65535)
+            log.debug("Output chunk from addurl: %r", out)
+            if b'\n' in out:
+                break
 
         log.info("Setting file metadata via batch mode ...")
         log.debug(
