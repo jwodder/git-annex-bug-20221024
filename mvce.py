@@ -73,23 +73,21 @@ async def amain():
         log.debug(
             "Opening pipe to: git-annex metadata --batch --json --json-error-messages"
         )
-        with subprocess.Popen(
+        log.debug("Input to metadata: %r", line_in)
+        line_in = (
+            json.dumps(
+                {"file": file, "fields": metadata}, separators=(",", ":")
+            )
+            + "\n"
+        ).encode("utf-8")
+        r = subprocess.run(
             ["git-annex", "metadata", "--batch", "--json", "--json-error-messages"],
             cwd=repo,
-            stdin=subprocess.PIPE,
+            input=line_in,
             stdout=subprocess.PIPE,
-        ) as p:
-            line_in = (
-                json.dumps(
-                    {"file": file, "fields": metadata}, separators=(",", ":")
-                )
-                + "\n"
-            ).encode("utf-8")
-            log.debug("Input to metadata: %r", line_in)
-            p.stdin.write(line_in)
-            p.stdin.flush()
-            line_out = p.stdout.readline()
-            log.debug("Output from metadata: %r", line_out)
+        )
+        log.debug("%s", f"{r.returncode=}")
+        log.debug("%s", f"{r.stdout=}")
 
         async for out in addurl.stdout:
             log.debug("Output chunk from addurl: %r", out)
