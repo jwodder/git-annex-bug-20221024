@@ -7,16 +7,9 @@ import subprocess
 import tempfile
 import anyio
 
-FILES = {
-    "foo/bar.txt": {
-        "url": "https://httpbin.org/encoding/utf8",
-        "metadata": {"foo": ["gnusto cleesh"]},
-    },
-    "programming/gameboy.pdf": {
-        "url": "https://archive.org/download/GameBoyProgManVer1.1/GameBoyProgManVer1.1.pdf",
-        "metadata": {"title": ["GameBoy Programming Manual"]},
-    }
-}
+FILE = "foo/bar.txt"
+URL = "https://httpbin.org/encoding/utf8"
+METADATA = {"foo": ["gnusto cleesh"]}
 
 
 async def amain():
@@ -51,35 +44,28 @@ async def amain():
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
     ) as addurl:
-        for file, data in FILES.items():
-            log.info("Downloading a file to %s ...", file)
-            line_in = f"{data['url']} {file}{os.linesep}".encode("utf-8")
-            log.debug("Input to addurl: %r", line_in)
-            await addurl.stdin.send(line_in)
+        log.info("Downloading a file to %s ...", FILE)
+        line_in = f"{URL} {FILE}{os.linesep}".encode("utf-8")
+        log.debug("Input to addurl: %r", line_in)
+        await addurl.stdin.send(line_in)
         await addurl.stdin.aclose()
 
-        buf = b""
         async for out in addurl.stdout:
             log.debug("Output chunk from addurl: %r", out)
-            buf += out
             if b'\n' in out:
                 break
-
-        s = buf[:buf.index(b"\n")].decode("utf-8")
-        file = json.loads(s)["file"]
-        metadata = FILES[file]["metadata"]
 
         log.info("Setting file metadata via batch mode ...")
         log.debug(
             "Opening pipe to: git-annex metadata --batch --json --json-error-messages"
         )
-        log.debug("Input to metadata: %r", line_in)
         line_in = (
             json.dumps(
-                {"file": file, "fields": metadata}, separators=(",", ":")
+                {"file": FILE, "fields": METADATA}, separators=(",", ":")
             )
             + "\n"
         ).encode("utf-8")
+        log.debug("Input to metadata: %r", line_in)
         r = subprocess.run(
             ["git-annex", "metadata", "--batch", "--json", "--json-error-messages"],
             cwd=repo,
