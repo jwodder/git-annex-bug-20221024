@@ -5,14 +5,15 @@ import logging
 from pathlib import Path
 import subprocess
 import tempfile
+import anyio
 
-# URL = "https://httpbin.org/encoding/utf8"
-# FILE = Path("foo", "bar.txt")
-# METADATA = {"foo": ["gnusto cleesh"]}
+URL = "https://httpbin.org/encoding/utf8"
+FILE = Path("foo", "bar.txt")
+METADATA = {"foo": ["gnusto cleesh"]}
 
-URL = "https://archive.org/download/GameBoyProgManVer1.1/GameBoyProgManVer1.1.pdf"
-FILE = "programming/gameboy.pdf"
-METADATA = {"title": ["GameBoy Programming Manual"]}
+#URL = "https://archive.org/download/GameBoyProgManVer1.1/GameBoyProgManVer1.1.pdf"
+#FILE = "programming/gameboy.pdf"
+#METADATA = {"title": ["GameBoy Programming Manual"]}
 
 
 async def amain():
@@ -35,27 +36,26 @@ async def amain():
     log.info("Downloading a file to %s ...", FILE)
     log.debug("Opening pipe to: git-annex addurl --file %s %s", URL, FILE)
 
-    addurl = await asyncio.create_subprocess_exec(
-        "git-annex",
-        "addurl",
-        "--batch",
-        "--with-files",
-        "-Jcpus",
-        "--json",
-        "--json-error-messages",
+    async with await anyio.open_process(
+        [
+            "git-annex",
+            "addurl",
+            "--batch",
+            "--with-files",
+            "-Jcpus",
+            "--json",
+            "--json-error-messages",
+        ],
         cwd=repo,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-    )
-    try:
+    ) as addurl:
         line_in = f"{URL} {FILE}\n".encode("utf-8")
         log.debug("Input to addurl: %r", line_in)
-        addurl.stdin.write(line_in)
-        await addurl.stdin.drain()
+        await addurl.stdin.send(line_in)
         #line_out = await addurl.stdout.readline()
         #log.debug("Output from addurl: %r", line_out)
-        while True:
-            out = await addurl.stdout.read(65535)
+        async for out in addurl.stdout:
             log.debug("Output chunk from addurl: %r", out)
             if b'\n' in out:
                 break
@@ -81,9 +81,6 @@ async def amain():
             p.stdin.flush()
             line_out = p.stdout.readline()
             log.debug("Output from metadata: %r", line_out)
-    finally:
-        addurl.stdin.close()
-        await addurl.wait()
 
 
 if __name__ == "__main__":
