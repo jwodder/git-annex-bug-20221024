@@ -21,6 +21,9 @@ jobs:
           python -m pip install anyio datalad-installer
           datalad-installer -l DEBUG --sudo ok git-annex -m datalad/git-annex:release
 
+      - name: Sanity check
+        run: python -V
+
       - name: Run script
         run: python3 mvce.py
 
