@@ -2,7 +2,6 @@
 import asyncio
 import json
 import logging
-import os
 import subprocess
 import tempfile
 import anyio
@@ -15,7 +14,7 @@ FILES = {
     "programming/gameboy.pdf": {
         "url": "https://archive.org/download/GameBoyProgManVer1.1/GameBoyProgManVer1.1.pdf",
         "metadata": {"title": ["GameBoy Programming Manual"]},
-    }
+    },
 }
 
 
@@ -53,7 +52,7 @@ async def amain():
     ) as addurl:
         for file, data in FILES.items():
             log.info("Downloading a file to %s ...", file)
-            line_in = f"{data['url']} {file}{os.linesep}".encode("utf-8")
+            line_in = f"{data['url']} {file}\n".encode("utf-8")
             log.debug("Input to addurl: %r", line_in)
             await addurl.stdin.send(line_in)
         await addurl.stdin.aclose()
@@ -62,24 +61,20 @@ async def amain():
         async for out in addurl.stdout:
             log.debug("Output chunk from addurl: %r", out)
             buf += out
-            if b'\n' in out:
+            if b"\n" in out:
                 break
 
-        s = buf[:buf.index(b"\n")].decode("utf-8")
-        file = json.loads(s)["file"]
+        file = json.loads(buf[: buf.index(b"\n")])["file"]
         metadata = FILES[file]["metadata"]
 
         log.info("Setting file metadata via batch mode ...")
         log.debug(
             "Opening pipe to: git-annex metadata --batch --json --json-error-messages"
         )
+        line_in = (json.dumps({"file": file, "fields": metadata}) + "\n").encode(
+            "utf-8"
+        )
         log.debug("Input to metadata: %r", line_in)
-        line_in = (
-            json.dumps(
-                {"file": file, "fields": metadata}, separators=(",", ":")
-            )
-            + "\n"
-        ).encode("utf-8")
         r = subprocess.run(
             ["git-annex", "metadata", "--batch", "--json", "--json-error-messages"],
             cwd=repo,
