@@ -79,6 +79,16 @@ async def amain():
 
     out = await addurl.stdout.read()
     log.debug("Rest of output from addurl: %r", out)
+    await addurl.wait()
+
+    log.info("Fetching metadata for %s ...", file)
+    r2 = subprocess.run(
+        ["git-annex", "metadata", "--json", "--json-error-messages", file],
+        cwd=repo,
+        stdout=subprocess.PIPE,
+    )
+    log.debug("%s", f"{r2.returncode=}")
+    log.debug("%s", f"{r2.stdout=}")
 
 
 if __name__ == "__main__":
