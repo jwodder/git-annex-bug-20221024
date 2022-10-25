@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+import os
 import subprocess
 import tempfile
 import anyio
@@ -52,7 +53,7 @@ async def amain():
     ) as addurl:
         for file, data in FILES.items():
             log.info("Downloading a file to %s ...", file)
-            line_in = f"{data['url']} {file}\n".encode("utf-8")
+            line_in = f"{data['url']} {file}{os.linesep}".encode("utf-8")
             log.debug("Input to addurl: %r", line_in)
             await addurl.stdin.send(line_in)
         buf = b""
