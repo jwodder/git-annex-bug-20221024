@@ -56,16 +56,9 @@ async def amain():
             line_in = f"{data['url']} {file}{os.linesep}".encode("utf-8")
             log.debug("Input to addurl: %r", line_in)
             await addurl.stdin.send(line_in)
-        buf = b""
+        await addurl.stdin.aclose()
         async for out in addurl.stdout:
             log.debug("Output chunk from addurl: %r", out)
-            buf += out
-            if b'\n' in out:
-                break
-        s = buf[:buf.index(b"\n")].decode("utf-8")
-
-        file = json.loads(s)["file"]
-        metadata = FILES[file]["metadata"]
 
         log.info("Setting file metadata via batch mode ...")
         log.debug(
@@ -77,6 +70,8 @@ async def amain():
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
         ) as p:
+            file = "foo/bar.txt"
+            metadata = FILES[file]["metadata"]
             line_in = (
                 json.dumps(
                     {"file": file, "fields": metadata}, separators=(",", ":")
@@ -88,10 +83,6 @@ async def amain():
             p.stdin.flush()
             line_out = p.stdout.readline()
             log.debug("Output from metadata: %r", line_out)
-
-        await addurl.stdin.aclose()
-        async for out in addurl.stdout:
-            log.debug("Output chunk from addurl: %r", out)
 
 
 if __name__ == "__main__":
