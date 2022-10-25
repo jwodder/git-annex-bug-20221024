@@ -18,7 +18,7 @@ jobs:
 
       - name: Install git-annex
         run: |
-          python -m pip install anyio datalad-installer
+          python -m pip install datalad-installer
           datalad-installer -l DEBUG --sudo ok git-annex -m datalad/git-annex:release
 
       - name: Run script

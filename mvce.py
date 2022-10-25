@@ -4,7 +4,6 @@ import json
 import logging
 import subprocess
 import tempfile
-import anyio
 
 FILES = {
     "foo/bar.txt": {
@@ -36,56 +35,50 @@ async def amain():
     subprocess.run(["git-annex", "init"], cwd=repo, check=True)
 
     log.debug("Opening pipe to: git-annex addurl ...")
-    async with await anyio.open_process(
-        [
-            "git-annex",
-            "addurl",
-            "--batch",
-            "--with-files",
-            "-Jcpus",
-            "--json",
-            "--json-error-messages",
-        ],
+    addurl = await asyncio.create_subprocess_exec(
+        "git-annex",
+        "addurl",
+        "--batch",
+        "--with-files",
+        "-Jcpus",
+        "--json",
+        "--json-error-messages",
         cwd=repo,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-    ) as addurl:
-        for file, data in FILES.items():
-            log.info("Downloading a file to %s ...", file)
-            line_in = f"{data['url']} {file}\n".encode("utf-8")
-            log.debug("Input to addurl: %r", line_in)
-            await addurl.stdin.send(line_in)
-        await addurl.stdin.aclose()
+    )
+    for file, data in FILES.items():
+        log.info("Downloading a file to %s ...", file)
+        line_in = f"{data['url']} {file}\n".encode("utf-8")
+        log.debug("Input to addurl: %r", line_in)
+        addurl.stdin.write(line_in)
+        await addurl.stdin.drain()
+    addurl.stdin.close()
+    await addurl.stdin.wait_closed()
 
-        buf = b""
-        async for out in addurl.stdout:
-            log.debug("Output chunk from addurl: %r", out)
-            buf += out
-            if b"\n" in out:
-                break
+    out = await addurl.stdout.readline()
+    log.debug("Output from addurl: %r", out)
 
-        file = json.loads(buf[: buf.index(b"\n")])["file"]
-        metadata = FILES[file]["metadata"]
+    file = json.loads(out)["file"]
+    metadata = FILES[file]["metadata"]
 
-        log.info("Setting file metadata via batch mode ...")
-        log.debug(
-            "Opening pipe to: git-annex metadata --batch --json --json-error-messages"
-        )
-        line_in = (json.dumps({"file": file, "fields": metadata}) + "\n").encode(
-            "utf-8"
-        )
-        log.debug("Input to metadata: %r", line_in)
-        r = subprocess.run(
-            ["git-annex", "metadata", "--batch", "--json", "--json-error-messages"],
-            cwd=repo,
-            input=line_in,
-            stdout=subprocess.PIPE,
-        )
-        log.debug("%s", f"{r.returncode=}")
-        log.debug("%s", f"{r.stdout=}")
+    log.info("Setting file metadata via batch mode ...")
+    log.debug(
+        "Opening pipe to: git-annex metadata --batch --json --json-error-messages"
+    )
+    line_in = (json.dumps({"file": file, "fields": metadata}) + "\n").encode("utf-8")
+    log.debug("Input to metadata: %r", line_in)
+    r = subprocess.run(
+        ["git-annex", "metadata", "--batch", "--json", "--json-error-messages"],
+        cwd=repo,
+        input=line_in,
+        stdout=subprocess.PIPE,
+    )
+    log.debug("%s", f"{r.returncode=}")
+    log.debug("%s", f"{r.stdout=}")
 
-        async for out in addurl.stdout:
-            log.debug("Output chunk from addurl: %r", out)
+    out = await addurl.stdout.read()
+    log.debug("Rest of output from addurl: %r", out)
 
 
 if __name__ == "__main__":
