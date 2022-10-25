@@ -2,18 +2,20 @@
 import asyncio
 import json
 import logging
-from pathlib import Path
 import subprocess
 import tempfile
 import anyio
 
-URL = "https://httpbin.org/encoding/utf8"
-FILE = Path("foo", "bar.txt")
-METADATA = {"foo": ["gnusto cleesh"]}
-
-#URL = "https://archive.org/download/GameBoyProgManVer1.1/GameBoyProgManVer1.1.pdf"
-#FILE = "programming/gameboy.pdf"
-#METADATA = {"title": ["GameBoy Programming Manual"]}
+FILES = {
+    "foo/bar.txt": {
+        "url": "https://httpbin.org/encoding/utf8",
+        "metadata": {"foo": ["gnusto cleesh"]},
+    },
+    "programming/gameboy.pdf": {
+        "url": "https://archive.org/download/GameBoyProgManVer1.1/GameBoyProgManVer1.1.pdf",
+        "metadata": {"title": ["GameBoy Programming Manual"]},
+    }
+}
 
 
 async def amain():
@@ -33,9 +35,7 @@ async def amain():
     log.debug("Running: git-annex init")
     subprocess.run(["git-annex", "init"], cwd=repo, check=True)
 
-    log.info("Downloading a file to %s ...", FILE)
-    log.debug("Opening pipe to: git-annex addurl --file %s %s", URL, FILE)
-
+    log.debug("Opening pipe to: git-annex addurl ...")
     async with await anyio.open_process(
         [
             "git-annex",
@@ -50,15 +50,21 @@ async def amain():
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
     ) as addurl:
-        line_in = f"{URL} {FILE}\r\n".encode("utf-8")
-        log.debug("Input to addurl: %r", line_in)
-        await addurl.stdin.send(line_in)
-        #line_out = await addurl.stdout.readline()
-        #log.debug("Output from addurl: %r", line_out)
+        for file, data in FILES.items():
+            log.info("Downloading a file to %s ...", file)
+            line_in = f"{data['url']} {file}\n".encode("utf-8")
+            log.debug("Input to addurl: %r", line_in)
+            await addurl.stdin.send(line_in)
+        buf = b""
         async for out in addurl.stdout:
             log.debug("Output chunk from addurl: %r", out)
+            buf += out
             if b'\n' in out:
                 break
+        s = buf[:buf.index(b"\n")].decode("utf-8")
+
+        file = json.loads(s)["file"]
+        metadata = FILES[file]["metadata"]
 
         log.info("Setting file metadata via batch mode ...")
         log.debug(
@@ -72,7 +78,7 @@ async def amain():
         ) as p:
             line_in = (
                 json.dumps(
-                    {"file": str(FILE), "fields": METADATA}, separators=(",", ":")
+                    {"file": file, "fields": metadata}, separators=(",", ":")
                 )
                 + "\n"
             ).encode("utf-8")
@@ -81,6 +87,10 @@ async def amain():
             p.stdin.flush()
             line_out = p.stdout.readline()
             log.debug("Output from metadata: %r", line_out)
+
+        await addurl.stdin.aclose()
+        async for out in addurl.stdout:
+            log.debug("Output chunk from addurl: %r", out)
 
 
 if __name__ == "__main__":
