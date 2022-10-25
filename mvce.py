@@ -50,7 +50,7 @@ async def amain():
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
     ) as addurl:
-        line_in = f"{URL} {FILE}\n".encode("utf-8")
+        line_in = f"{URL} {FILE}\r\n".encode("utf-8")
         log.debug("Input to addurl: %r", line_in)
         await addurl.stdin.send(line_in)
         #line_out = await addurl.stdout.readline()
