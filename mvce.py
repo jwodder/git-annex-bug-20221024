@@ -73,9 +73,11 @@ async def amain():
         cwd=repo,
         input=line_in,
         stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
     log.debug("%s", f"{r.returncode=}")
     log.debug("%s", f"{r.stdout=}")
+    log.debug("%s", f"{r.stderr=}")
 
     out = await addurl.stdout.read()
     log.debug("Rest of output from addurl: %r", out)
