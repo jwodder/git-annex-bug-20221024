@@ -54,6 +54,8 @@ def main():
             log.debug("Input to addurl: %r", line_in)
             addurl.stdin.write(line_in)
             addurl.stdin.flush()
+        # We need to close addurl's stdin or else trying to read from stdout on
+        # Windows will seemingly block forever.
         addurl.stdin.close()
 
         out = addurl.stdout.readline()
@@ -62,7 +64,7 @@ def main():
         file = json.loads(out)["file"]
         metadata = FILES[file]["metadata"]
 
-        log.info("Setting file metadata via batch mode ...")
+        log.info("Setting file metadata for %s via batch mode ...", file)
         log.debug(
             "Opening pipe to: git-annex metadata --batch --json --json-error-messages"
         )
