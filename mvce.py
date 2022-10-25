@@ -55,6 +55,7 @@ async def amain():
         addurl.stdin.write(line_in)
         await addurl.stdin.drain()
     addurl.stdin.close()
+    await addurl.stdin.wait_closed()
 
     buf = b""
     while True:
