@@ -56,10 +56,15 @@ async def amain():
         await addurl.stdin.drain()
     addurl.stdin.close()
 
-    out = await addurl.stdout.readline()
-    log.debug("Output from addurl: %r", out)
+    buf = b""
+    while True:
+        out = await addurl.stdout.read(65535)
+        log.debug("Output chunk from addurl: %r", out)
+        buf += out
+        if b"\n" in out:
+            break
 
-    file = json.loads(out)["file"]
+    file = json.loads(buf[: buf.index(b"\n")])["file"]
     metadata = FILES[file]["metadata"]
 
     log.info("Setting file metadata via batch mode ...")
