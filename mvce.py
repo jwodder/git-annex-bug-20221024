@@ -32,7 +32,7 @@ subprocess.run(["git-annex", "init"], cwd=repo, check=True)
 log.info("Downloading a file to %s ...", FILE)
 log.debug("Opening pipe to: git-annex addurl --file %s %s", URL, FILE)
 
-with subprocess.Popen(["git-annex", "addurl", "--batch", "--with-files", "-Jcpus", "--json", "--json-error-messages"], cwd=repo, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as addurl:
+with subprocess.Popen(["git-annex", "addurl", "--batch", "--with-files", "-Jcpus", "--json", "--json-error-messages"], cwd=repo, stdin=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=0) as addurl:
     line_in = f"{URL} {FILE}\n".encode("utf-8")
     log.debug("Input to addurl: %r", line_in)
     addurl.stdin.write(line_in)
